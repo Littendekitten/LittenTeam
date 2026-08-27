@@ -1,1 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LittenTeam | Littendekitten Hub</title>
+  <style>
+    :root {
+      --primary: #ff4500;
+      --secondary: #e63900;
+      --bg: #0f0f10;
+      --card-bg: #1a1a1c;
+      --text: #f0f0f0;
+      --accent-green: #2ec4b6;
+    }
 
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      background-color: var(--card-bg);
+      border: 1px solid #2a2a2d;
+      padding: 2.5rem;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+      text-align: center;
+      max-width: 420px;
+      width: 85%;
+    }
+
+    h1 {
+      color: var(--primary);
+      margin: 0 0 0.5rem 0;
+      font-size: 2.2rem;
+      letter-spacing: -0.5px;
+    }
+
+    p {
+      color: #a0a0a0;
+      font-size: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0.5rem 1rem;
+      border-radius: 50px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      background-color: #26262a;
+      color: #e0e0e0;
+      transition: all 0.3s ease;
+    }
+
+    .status-badge.online {
+      background-color: rgba(46, 196, 182, 0.15);
+      color: var(--accent-green);
+      border: 1px solid rgba(46, 196, 182, 0.3);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #777;
+    }
+
+    .status-badge.online .status-dot {
+      background-color: var(--accent-green);
+      box-shadow: 0 0 8px var(--accent-green);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>LittenTeam</h1>
+    <p>Official dynamic hub for <strong>Littendekitten</strong></p>
+    
+    <div id="firebase-status" class="status-badge">
+      <span class="status-dot"></span>
+      <span id="status-text">Initializing Firebase...</span>
+    </div>
+  </div>
+
+  <!-- Firebase v10 CDN Scripts (Browser Compatible) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyBvRqJJlLfhTJ7fGDDG_11ixampAdkpzFQ",
+      authDomain: "littenteam.firebaseapp.com",
+      projectId: "littenteam",
+      storageBucket: "littenteam.firebasestorage.app",
+      messagingSenderId: "234920149704",
+      appId: "1:234920149704:web:01c3a421cd0a57d04b1bfd",
+      measurementId: "G-HBJK5Q8HP6"
+    };
+
+    // Initialize Firebase
+    try {
+      const app = initializeApp(firebaseConfig);
+      const analytics = getAnalytics(app);
+
+      // Update UI state
+      const statusContainer = document.getElementById("firebase-status");
+      const statusText = document.getElementById("status-text");
+      
+      statusText.textContent = "Firebase Connected";
+      statusContainer.classList.add("online");
+    } catch (error) {
+      console.error("Firebase initialization failed:", error);
+      document.getElementById("status-text").textContent = "Connection Failed";
+    }
+  </script>
+</body>
+</html>

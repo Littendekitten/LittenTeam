@@ -7,7 +7,6 @@
   <style>
     :root {
       --primary: #ff4500;
-      --secondary: #e63900;
       --bg: #0f0f10;
       --card-bg: #1a1a1c;
       --text: #f0f0f0;
@@ -41,26 +40,52 @@
       color: var(--primary);
       margin: 0 0 0.5rem 0;
       font-size: 2.2rem;
-      letter-spacing: -0.5px;
     }
 
     p {
       color: #a0a0a0;
       font-size: 1rem;
-      margin-bottom: 2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .btn {
+      background-color: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn:hover {
+      background-color: #e63900;
+    }
+
+    .user-profile {
+      display: none;
+      margin-top: 1.5rem;
+    }
+
+    .user-profile img {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      border: 2px solid var(--primary);
     }
 
     .status-badge {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 0.5rem 1rem;
+      padding: 0.4rem 0.9rem;
       border-radius: 50px;
-      font-size: 0.875rem;
-      font-weight: 600;
+      font-size: 0.85rem;
       background-color: #26262a;
       color: #e0e0e0;
-      transition: all 0.3s ease;
+      margin-bottom: 1.5rem;
     }
 
     .status-badge.online {
@@ -78,7 +103,6 @@
 
     .status-badge.online .status-dot {
       background-color: var(--accent-green);
-      box-shadow: 0 0 8px var(--accent-green);
     }
   </style>
 </head>
@@ -86,20 +110,31 @@
 
   <div class="container">
     <h1>LittenTeam</h1>
-    <p>Official dynamic hub for <strong>Littendekitten</strong></p>
+    <p>Official hub for <strong>Littendekitten</strong></p>
     
     <div id="firebase-status" class="status-badge">
       <span class="status-dot"></span>
-      <span id="status-text">Initializing Firebase...</span>
+      <span id="status-text">Connecting...</span>
+    </div>
+
+    <!-- Auth Actions -->
+    <div id="auth-section">
+      <button id="login-btn" class="btn">Sign in with Google</button>
+      
+      <div id="user-profile" class="user-profile">
+        <img id="user-avatar" src="" alt="Profile Picture" />
+        <h3 id="user-name" style="margin: 0.5rem 0 0.25rem;"></h3>
+        <p id="user-email" style="font-size: 0.85rem; margin-bottom: 1rem;"></p>
+        <button id="logout-btn" class="btn" style="background-color: #333;">Sign Out</button>
+      </div>
     </div>
   </div>
 
-  <!-- Firebase v10 CDN Scripts (Browser Compatible) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // Your web app's Firebase configuration
     const firebaseConfig = {
       apiKey: "AIzaSyBvRqJJlLfhTJ7fGDDG_11ixampAdkpzFQ",
       authDomain: "littenteam.firebaseapp.com",
@@ -110,21 +145,80 @@
       measurementId: "G-HBJK5Q8HP6"
     };
 
-    // Initialize Firebase
-    try {
-      const app = initializeApp(firebaseConfig);
-      const analytics = getAnalytics(app);
+    // Initialize Services
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
 
-      // Update UI state
+    // UI Elements
+    const loginBtn = document.getElementById('login-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const userProfile = document.getElementById('user-profile');
+    const userAvatar = document.getElementById('user-avatar');
+    const userName = document.getElementById('user-name');
+    const userEmail = document.getElementById('user-email');
+
+    // Helper: Create/Update user document in Firestore "users" collection
+    async function syncUserCollection(user) {
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        // Create new user document if it doesn't exist
+        await setDoc(userRef, {
+          uid: user.uid,
+          displayName: user.displayName,
+          email: user.email,
+          photoURL: user.photoURL,
+          role: "member", // Default role for later features
+          createdAt: serverTimestamp(),
+          lastLogin: serverTimestamp()
+        });
+        console.log("New user document created in 'users' collection!");
+      } else {
+        // Update existing user document with last login timestamp
+        await setDoc(userRef, { lastLogin: serverTimestamp() }, { merge: true });
+        console.log("User last login updated.");
+      }
+    }
+
+    // Monitor Auth State
+    onAuthStateChanged(auth, async (user) => {
       const statusContainer = document.getElementById("firebase-status");
       const statusText = document.getElementById("status-text");
-      
+
       statusText.textContent = "Firebase Connected";
       statusContainer.classList.add("online");
-    } catch (error) {
-      console.error("Firebase initialization failed:", error);
-      document.getElementById("status-text").textContent = "Connection Failed";
-    }
+
+      if (user) {
+        // Sync user to Firestore
+        await syncUserCollection(user);
+
+        // Update UI
+        loginBtn.style.display = "none";
+        userProfile.style.display = "block";
+        userAvatar.src = user.photoURL;
+        userName.textContent = user.displayName;
+        userEmail.textContent = user.email;
+      } else {
+        // Reset UI
+        loginBtn.style.display = "inline-block";
+        userProfile.style.display = "none";
+      }
+    });
+
+    // Login Event
+    loginBtn.addEventListener('click', async () => {
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (err) {
+        console.error("Login failed:", err);
+      }
+    });
+
+    // Logout Event
+    logoutBtn.addEventListener('click', () => signOut(auth));
   </script>
 </body>
 </html>
